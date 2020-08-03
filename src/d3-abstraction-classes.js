@@ -40,6 +40,7 @@ class D3Object {
     const labels = (props.hasOwnProperty('labels'))
         ? props.labels
         : {
+          className: 'labels',
           header: {id: 'header', text: 'Header'},
           footer: {id: 'footer', text: 'Footer'},
           left: {id: 'left-label', text: 'Left Label'},
@@ -49,6 +50,10 @@ class D3Object {
         ? props.tooltips
         : false;
 
+    // Don't require the className for label objects to be passed
+    if (!labels.hasOwnProperty('className')) {
+      labels.className = 'labels';
+    }
     this.height = height;
     this.width = width;
     this.margins = margins;
@@ -127,6 +132,7 @@ class D3Object {
 
     this.svg.append('text')
         .attr('id', id)
+        .attr('class', this.labels.className)
         .attr('font-size', headerAreaHeight / 2)
         .attr('x', headerAreaX + (headerAreaWidth / 2))
         .attr('y', headerAreaY + (headerAreaHeight / 4))
@@ -152,6 +158,7 @@ class D3Object {
 
     this.svg.append('text')
         .attr('id', id)
+        .attr('class', this.labels.className)
         .attr('font-size', headerAreaHeight / 4)
         .attr('x', headerAreaX + (headerAreaWidth / 2))
         .attr('y', headerAreaY + (headerAreaHeight * 3 / 4))
@@ -180,6 +187,7 @@ class D3Object {
 
     this.svg.append('text')
         .attr('id', id)
+        .attr('class', this.labels.className)
         .attr('font-size', rightAreaWidth / 2)
         .attr('x', rightLabelX)
         .attr('y', rightLabelY)
@@ -208,6 +216,7 @@ class D3Object {
 
     this.svg.append('text')
         .attr('id', id)
+        .attr('class', this.labels.className)
         .attr('font-size', leftAreaWidth / 2)
         .attr('x', leftLabelX)
         .attr('y', leftLabelY)
@@ -234,6 +243,7 @@ class D3Object {
 
     this.svg.append('text')
         .attr('id', id)
+        .attr('class', this.labels.className)
         .attr('font-size', footerAreaHeight / 2)
         .attr('x', footerAreaX + (footerAreaWidth / 2))
         .attr('y', footerAreaY + (footerAreaHeight / 2))
@@ -254,9 +264,9 @@ class D3Object {
 
   render(props = {}) {
     const divID = (props.hasOwnProperty('divID')) ? props.divID : '#root';
-    const svgClass = (props.hasOwnProperty('svgClass')) ?
-        props.svgClass :
-        'D3Object';
+    const svgClass = (props.hasOwnProperty('svgClass'))
+        ? props.svgClass
+        : 'D3Object';
     this.renderD3Object(divID, svgClass);
     this.renderLabels(this.labels);
   }
