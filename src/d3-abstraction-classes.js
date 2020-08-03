@@ -101,9 +101,8 @@ class D3Object {
         .attr('class', className)
         .attr('viewBox', `0 0 ${this.width} ${this.height}`)
         .attr('preserveAspectRatio', 'xMidYMid meet');
-    this.displayArea = this.svg.append('g')
-        .attr('transform',
-            `translate(${this.margins.left}, ${this.margins.top})`);
+    this.displayArea = this.svg.append('g').attr('transform',
+        `translate(${this.margins.left}, ${this.margins.top})`);
     if (this.tooltips) {
       this.tip = d3.tip().attr('class', 'd3-tip');
       this.svg.call(this.tip);
@@ -304,12 +303,17 @@ class D3Chart extends D3Object {
 
   addElementProperties(data, props, element) {
     Object.keys(props).forEach(property => {
-      this.displayArea.selectAll(element).data(data).join(element)
+      this.displayArea.selectAll(element)
+          .data(data)
+          .join(element)
           .attr(property, props[property]);
     });
   }
 
   addToolTips(data, displayFunc, props, tipDirection, element) {
+    const tipDisplay = (displayFunc !== undefined)
+        ? displayFunc
+        : d => d;
     const tipProps = (props !== undefined)
         ? props
         : {};
@@ -319,7 +323,9 @@ class D3Chart extends D3Object {
     if (!this.tooltips) {
       return;
     }
-    this.displayArea.selectAll(element).data(data).join(element)
+    this.displayArea.selectAll(element)
+        .data(data)
+        .join(element)
         .on('mouseover', (d, i, n) => {
           Object.keys(tipProps).forEach(property => {
             if (typeof tipProps[property] === 'function') {
@@ -329,15 +335,13 @@ class D3Chart extends D3Object {
             }
           });
           this.tip.direction(direction);
-          this.tip.html(displayFunc(d));
+          this.tip.html(tipDisplay(d));
           this.tip.show(d, n[i]);
-          d3.select(n[i])
-              .style('opacity', '0.5');
+          d3.select(n[i]).style('opacity', '0.5');
         })
         .on('mouseout', (d, i, n) => {
           this.tip.hide(d, n[i]);
-          d3.select(n[i])
-              .style('opacity', '1');
+          d3.select(n[i]).style('opacity', '1');
         });
   }
 
@@ -381,10 +385,12 @@ class D3BarChart extends D3Chart {
 
   renderBars(data, className, xValue, yValue, barWidth) {
     if (!this.xAxis.scale || !this.yAxis.scale) {
-      console.error('scale not defined')
+      console.error('scale not defined');
       return;
     }
-    this.displayArea.selectAll('rect').data(data).enter()
+    this.displayArea.selectAll('rect')
+        .data(data)
+        .enter()
         .append('rect')
         .attr('class', className)
         .attr('height', d => this.displayHeight - this.yAxis.scale(yValue(d)))
@@ -429,10 +435,12 @@ class D3ScatterPlot extends D3Chart {
 
   renderDots(data, className, xValue, yValue, radius) {
     if (!this.xAxis.scale || !this.yAxis.scale) {
-      console.error('scale not defined')
+      console.error('scale not defined');
       return;
     }
-    this.displayArea.selectAll('circle').data(data).enter()
+    this.displayArea.selectAll('circle')
+        .data(data)
+        .enter()
         .append('circle')
         .attr('class', className)
         .attr('r', radius)
