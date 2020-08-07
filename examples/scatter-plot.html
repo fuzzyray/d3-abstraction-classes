@@ -88,8 +88,8 @@
   };
   scatterPlot.setMargins(12);
   scatterPlot.setLabels({header: {text: 'Scatterplot'}});
-  scatterPlot.setScale('xAxis', d3.scaleTime, [0, scatterPlot.displayWidth]);
-  scatterPlot.setScale('yAxis', d3.scaleLinear, [scatterPlot.displayHeight, 0]);
+  scatterPlot.setScale('xAxis', d3.scaleTime, [0, scatterPlot.plotArea.width]);
+  scatterPlot.setScale('yAxis', d3.scaleLinear, [scatterPlot.plotArea.height, 0]);
   scatterPlot.setDomain('xAxis',
       d3.extent(scatterData, d => d3.timeParse('%d-%b-%y')(d[0])));
   scatterPlot.setDomain('yAxis', [0, d3.max(scatterData, d => d[1])]);

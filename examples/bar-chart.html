@@ -76,8 +76,8 @@
     left: {text: 'Amount (thousands)'},
   };
   barChart.setLabels(barChartLabels);
-  barChart.setScale('xAxis', d3.scaleBand, [0, barChart.displayWidth], 0.1);
-  barChart.setScale('yAxis', d3.scaleLinear, [barChart.displayHeight, 0]);
+  barChart.setScale('xAxis', d3.scaleBand, [0, barChart.plotArea.width], 0.1);
+  barChart.setScale('yAxis', d3.scaleLinear, [barChart.plotArea.height, 0]);
   barChart.setDomain('xAxis', barChartData.map(d => d[0]));
   barChart.setDomain('yAxis', [0, d3.max(barChartData, d => d[1])]);
   barChart.setAxis('xAxis', d3.axisBottom);
@@ -90,6 +90,7 @@
     barWidth: barChart.xAxis.scale.bandwidth(),
   });
   barChart.addToolTips(barChartData);
+  console.log(barChart)
 </script>
 </body>
 </html>

@@ -59,29 +59,98 @@ class D3Object {
     this.margins = margins;
     this.labels = labels;
     this.tooltips = tooltips;
+    this.svgGroups = {};
+  }
+
+  // Calculate our areas for rendering elements
+  get plotArea() {
+    return D3Object.calculateArea(this.height, this.width, 0, 0, this.margins);
+  }
+
+  get headerArea() {
+    return D3Object.calculateArea(this.margins.top, this.plotArea.width,
+        this.margins.left, 0);
+  }
+
+  get footerArea() {
+    return D3Object.calculateArea(this.margins.bottom, this.plotArea.width,
+        this.margins.left, this.height - this.margins.bottom);
+  }
+
+  get leftLabelArea() {
+    return D3Object.calculateArea(this.plotArea.height, this.margins.left, 0,
+        this.margins.top);
+  }
+
+  get rightLabelArea() {
+    return D3Object.calculateArea(this.plotArea.height, this.margins.right,
+        this.width - this.margins.right, this.margins.top);
+  }
+
+  get topRightArea() {
+    return D3Object.calculateArea(this.margins.top, this.margins.right,
+        this.width - this.margins.right, 0);
+  }
+
+  get topLeftArea() {
+    return D3Object.calculateArea(this.margins.top, this.margins.left, 0, 0);
+  }
+
+  get bottomRightArea() {
+    return D3Object.calculateArea(this.margins.bottom, this.margins.right,
+        this.width - this.margins.right, this.height - this.margins.bottom);
+  }
+
+  get bottomLeftArea() {
+    return D3Object.calculateArea(this.margins.bottom, this.margins.left, 0,
+        this.height - this.margins.bottom);
+  }
+
+  // DEPRECATED: Legacy getter functions
+  get displayWidth() {
+    return this.plotArea.width;
   }
 
   get displayHeight() {
-    return this.height - (this.margins.top + this.margins.bottom);
-  }
-
-  get displayWidth() {
-    return this.width - (this.margins.left + this.margins.right);
+    return this.plotArea.height;
   }
 
   static calculateMargins(percentage, height, width) {
     const percentValue = (percentage < 1)
         ? percentage
         : percentage / 100;
-    const margins = {};
-    margins.top = height * percentValue;
-    margins.right = width * percentValue;
-    margins.bottom = height * percentValue;
-    margins.left = width * percentValue;
-    return margins;
+
+    // if percent is 0, just return 0
+    let marginX = !!percentValue ? width * percentValue : 0;
+    let marginY = !!percentValue ? height * percentValue : 0;
+
+    return {
+      top: marginY,
+      right: marginX,
+      bottom: marginY,
+      left: marginX,
+    };
   }
 
-  setMargins(percentage = 10) {
+  static calculateArea(height, width, startX, startY, margins) {
+    // proportional = true, keeps aspect ratio of the area
+    // For margins, pass a percentage value or a margins object
+    // default is 0% of the area for no margins
+    const areaMargins = (margins === undefined)
+        ? D3Object.calculateMargins(5, height, width)
+        : (typeof margins === 'number')
+            ? D3Object.calculateMargins(margins, height, width)
+            : margins;
+
+    const area = {};
+    area.height = height - (areaMargins.top + areaMargins.bottom);
+    area.width = width - (areaMargins.right + areaMargins.left);
+    area.X = startX + areaMargins.left;
+    area.Y = startY + areaMargins.top;
+    return area;
+  }
+
+  setMargins(percentage) {
     this.margins = D3Object.calculateMargins(percentage, this.height,
         this.width);
   }
@@ -100,165 +169,100 @@ class D3Object {
     });
   }
 
-  renderD3Object(divID, className) {
+  appendSVGGroup(name, area, id) {
+    id = (id === undefined) ? name : id;
+    this.svgGroups[name] = this.svg
+        .append('g')
+        .attr('id', id)
+        .attr('transform', `translate(${area.X}, ${area.Y})`);
+  }
+
+  renderSVG(divID, className) {
+    // Render the main SVG element, use viewBox for the most responsive behavior
     this.svg = d3.select(divID)
         .append('svg')
         .attr('class', className)
         .attr('viewBox', `0 0 ${this.width} ${this.height}`)
         .attr('preserveAspectRatio', 'xMidYMid meet');
-    this.displayArea = this.svg.append('g').attr('transform',
-        `translate(${this.margins.left}, ${this.margins.top})`);
     if (this.tooltips) {
       this.tip = d3.tip().attr('class', 'd3-tip');
       this.svg.call(this.tip);
     }
   }
 
-  // TODO: Lot's of duplicated code, needs to be abstracted even higher
-  renderHeader({text = '', id = ''}) {
-    if (text === '') {
-      return;
-    }
-    const headerHeight = this.margins.top;
-    const headerWidth = this.displayWidth;
-    const headerMargins = D3Object.calculateMargins(5, headerHeight,
-        headerWidth);
-    const headerAreaX = this.margins.right + headerMargins.right;
-    const headerAreaY = headerMargins.top;
-    const headerAreaHeight = headerHeight -
-        (headerMargins.top + headerMargins.bottom);
-    const headerAreaWidth = headerWidth -
-        (headerMargins.right + headerMargins.left);
-
-    this.svg.append('text')
-        .attr('id', id)
-        .attr('class', this.labels.className)
-        .attr('font-size', headerAreaHeight / 2)
-        .attr('x', headerAreaX + (headerAreaWidth / 2))
-        .attr('y', headerAreaY + (headerAreaHeight / 4))
-        .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'middle')
-        .text(text);
+  renderAreaGroups() {
+    this.appendSVGGroup('plotGroup', this.plotArea);
+    this.appendSVGGroup('headerGroup', this.headerArea);
+    this.appendSVGGroup('footerGroup', this.footerArea);
+    this.appendSVGGroup('leftGroup', this.leftLabelArea);
+    this.appendSVGGroup('rightGroup', this.rightLabelArea);
+    this.appendSVGGroup('topLeftGroup', this.topLeftArea);
+    this.appendSVGGroup('topRightGroup', this.topRightArea);
+    this.appendSVGGroup('bottomLeftGroup', this.bottomLeftArea);
+    this.appendSVGGroup('bottomRightGroup', this.bottomRightArea);
   }
 
-  renderSubHeader({text = '', id = ''}) {
+  renderLabel(group, placement, label, textRotation) {
+    const {X, Y, fontSize} = placement;
+    const {text, id} = label;
     if (text === '') {
       return;
     }
-    const headerHeight = this.margins.top;
-    const headerWidth = this.displayWidth;
-    const headerMargins = D3Object.calculateMargins(5, headerHeight,
-        headerWidth);
-    const headerAreaX = this.margins.right + headerMargins.right;
-    const headerAreaY = headerMargins.top;
-    const headerAreaHeight = headerHeight -
-        (headerMargins.top + headerMargins.bottom);
-    const headerAreaWidth = headerWidth -
-        (headerMargins.right + headerMargins.left);
 
-    this.svg.append('text')
+    group.append('text')
         .attr('id', id)
         .attr('class', this.labels.className)
-        .attr('font-size', headerAreaHeight / 4)
-        .attr('x', headerAreaX + (headerAreaWidth / 2))
-        .attr('y', headerAreaY + (headerAreaHeight * 3 / 4))
+        .attr('font-size', fontSize)
+        .attr('x', X)
+        .attr('y', Y)
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
         .text(text);
-
-  }
-
-  renderRightLabel({text = '', id = ''}) {
-    if (text === '') {
-      return;
+    if (!!textRotation) {
+      group.select('text')
+          .attr('transform', `rotate(${textRotation}, ${X}, ${Y})`);
     }
-    const rightLabelHeight = this.displayHeight;
-    const rightLabelWidth = this.margins.right;
-    const rightLabelMargins = D3Object.calculateMargins(5, rightLabelHeight,
-        rightLabelWidth);
-    const rightAreaX = this.width - (rightLabelWidth + rightLabelMargins.left);
-    const rightAreaY = this.margins.top + rightLabelMargins.top;
-    const rightAreaHeight = rightLabelHeight -
-        (rightLabelMargins.top + rightLabelMargins.bottom);
-    const rightAreaWidth = (rightLabelWidth -
-        (rightLabelMargins.right + rightLabelMargins.left)) / 2;
-    const rightLabelX = rightAreaX + (rightAreaWidth / 2);
-    const rightLabelY = rightAreaY + (rightAreaHeight / 2);
-
-    this.svg.append('text')
-        .attr('id', id)
-        .attr('class', this.labels.className)
-        .attr('font-size', rightAreaWidth / 2)
-        .attr('x', rightLabelX)
-        .attr('y', rightLabelY)
-        .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'middle')
-        .attr('transform', `rotate(90, ${rightLabelX}, ${rightLabelY})`)
-        .text(text);
-  }
-
-  renderLeftLabel({text = '', id = ''}) {
-    if (text === '') {
-      return;
-    }
-    const leftLabelHeight = this.displayHeight;
-    const leftLabelWidth = this.margins.left;
-    const leftLabelMargins = D3Object.calculateMargins(5, leftLabelHeight,
-        leftLabelWidth);
-    const leftAreaX = leftLabelMargins.left;
-    const leftAreaY = this.margins.top + leftLabelMargins.top;
-    const leftAreaHeight = leftLabelHeight -
-        (leftLabelMargins.top + leftLabelMargins.bottom);
-    const leftAreaWidth = (leftLabelWidth -
-        (leftLabelMargins.right + leftLabelMargins.left)) / 2;
-    const leftLabelX = leftAreaX + (leftAreaWidth / 2);
-    const leftLabelY = leftAreaY + (leftAreaHeight / 2);
-
-    this.svg.append('text')
-        .attr('id', id)
-        .attr('class', this.labels.className)
-        .attr('font-size', leftAreaWidth / 2)
-        .attr('x', leftLabelX)
-        .attr('y', leftLabelY)
-        .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'middle')
-        .attr('transform', `rotate(-90, ${leftLabelX}, ${leftLabelY})`)
-        .text(text);
-  }
-
-  renderFooter({text = '', id = ''}) {
-    if (text === '') {
-      return;
-    }
-    const footerHeight = this.margins.bottom / 1.5;
-    const footerWidth = this.displayWidth;
-    const footerMargins = D3Object.calculateMargins(5, footerHeight,
-        footerWidth);
-    const footerAreaX = this.margins.right + footerMargins.right;
-    const footerAreaY = (this.height - footerHeight) + footerMargins.top;
-    const footerAreaHeight = footerHeight -
-        (footerMargins.top + footerMargins.bottom);
-    const footerAreaWidth = footerWidth -
-        (footerMargins.right + footerMargins.left);
-
-    this.svg.append('text')
-        .attr('id', id)
-        .attr('class', this.labels.className)
-        .attr('font-size', footerAreaHeight / 2)
-        .attr('x', footerAreaX + (footerAreaWidth / 2))
-        .attr('y', footerAreaY + (footerAreaHeight / 2))
-        .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'middle')
-        .text(text);
   }
 
   renderLabels(labels) {
-    this.renderHeader(labels.header);
-    this.renderFooter(labels.footer);
-    this.renderLeftLabel(labels.left);
-    this.renderRightLabel(labels.right);
+    //TODO: Figure out how to override or compute easier
+    const headerPlacement = {
+      X: this.headerArea.width / 2,
+      Y: this.headerArea.height / 4,
+      fontSize: this.headerArea.height / 2,
+    };
+    const subHeaderPlacement = {
+      X: this.headerArea.width / 2,
+      Y: this.headerArea.height * 3 / 4,
+      fontSize: this.headerArea.height / 4,
+    };
+    const rightLabelPlacement = {
+      X: this.rightLabelArea.width / 2,
+      Y: this.rightLabelArea.height / 2,
+      fontSize: this.rightLabelArea.width / 4,
+    };
+    const leftLabelPlacement = {
+      X: this.leftLabelArea.width / 2,
+      Y: this.leftLabelArea.height / 2,
+      fontSize: this.leftLabelArea.width / 4,
+    };
+    const footerPlacement = {
+      X: this.footerArea.width / 2,
+      Y: this.footerArea.height * 3 / 4,
+      fontSize: this.footerArea.height / 4,
+    };
+
+    this.renderLabel(this.svgGroups.headerGroup, headerPlacement, labels.header,
+        0);
+    this.renderLabel(this.svgGroups.footerGroup, footerPlacement, labels.footer,
+        0);
+    this.renderLabel(this.svgGroups.leftGroup, leftLabelPlacement, labels.left,
+        -90);
+    this.renderLabel(this.svgGroups.rightGroup, rightLabelPlacement,
+        labels.right, 90);
     if (labels.hasOwnProperty('subheader')) {
-      this.renderSubHeader(labels.subheader);
+      this.renderLabel(this.svgGroups.headerGroup, subHeaderPlacement,
+          labels.subheader, 0);
     }
   }
 
@@ -267,7 +271,8 @@ class D3Object {
     const svgClass = (props.hasOwnProperty('svgClass'))
         ? props.svgClass
         : 'D3Object';
-    this.renderD3Object(divID, svgClass);
+    this.renderSVG(divID, svgClass);
+    this.renderAreaGroups();
     this.renderLabels(this.labels);
   }
 }
@@ -305,15 +310,15 @@ class D3Chart extends D3Object {
   }
 
   setXYValues() {
-    this.xAxis.x = this.margins.right;
-    this.xAxis.y = this.height - this.margins.bottom;
-    this.yAxis.x = this.margins.right;
-    this.yAxis.y = this.margins.top;
+    this.xAxis.x = this.plotArea.X;
+    this.xAxis.y = this.plotArea.Y + this.plotArea.height;
+    this.yAxis.x = this.plotArea.X;
+    this.yAxis.y = this.plotArea.Y;
   }
 
   addElementProperties(data, props, element) {
     Object.keys(props).forEach(property => {
-      this.displayArea.selectAll(element)
+      this.svgGroups.plotGroup.selectAll(element)
           .data(data)
           .join(element)
           .attr(property, props[property]);
@@ -333,7 +338,7 @@ class D3Chart extends D3Object {
     if (!this.tooltips) {
       return;
     }
-    this.displayArea.selectAll(element)
+    this.svgGroups.plotGroup.selectAll(element)
         .data(data)
         .join(element)
         .on('mouseover', (d, i, n) => {
@@ -398,12 +403,12 @@ class D3BarChart extends D3Chart {
       console.error('scale not defined');
       return;
     }
-    this.displayArea.selectAll('rect')
+    this.svgGroups.plotGroup.selectAll('rect')
         .data(data)
         .enter()
         .append('rect')
         .attr('class', className)
-        .attr('height', d => this.displayHeight - this.yAxis.scale(yValue(d)))
+        .attr('height', d => this.plotArea.height - this.yAxis.scale(yValue(d)))
         .attr('width', barWidth)
         .attr('x', d => this.xAxis.scale(xValue(d)))
         .attr('y', d => this.yAxis.scale(yValue(d)));
@@ -424,7 +429,7 @@ class D3BarChart extends D3Chart {
         : d => d[1];
     const barWidth = (props.hasOwnProperty('barWidth'))
         ? props.barWidth
-        : this.displayWidth / data.length;
+        : this.plotArea.width / data.length;
     super.render(props);
     this.renderBars(data, barClassName, xValue, yValue, barWidth);
   }
@@ -448,7 +453,7 @@ class D3ScatterPlot extends D3Chart {
       console.error('scale not defined');
       return;
     }
-    this.displayArea.selectAll('circle')
+    this.svgGroups.plotGroup.selectAll('circle')
         .data(data)
         .enter()
         .append('circle')
