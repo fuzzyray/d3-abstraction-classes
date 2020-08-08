@@ -340,8 +340,10 @@ class D3Chart extends D3Object {
     this[axis].scale.domain(arr);
   }
 
+  // TODO: Fix so that ticks can be customized
   setAxis(axis, axisFunc) {
-    this[axis].axis = axisFunc(this[axis].scale);
+    this[axis].axis = axisFunc()
+        .scale(this[axis].scale);
   }
 
   setXYValues() {
@@ -361,10 +363,6 @@ class D3Chart extends D3Object {
   }
 
   renderAxis(axis, id) {
-    if (!this[axis].axis) {
-      console.error(`${axis} axis function undefined`);
-      return;
-    }
     this.svg.append('g')
         .call(this[axis].axis)
         .attr('transform', `translate(${this[axis].x}, ${this[axis].y})`)
@@ -380,8 +378,13 @@ class D3Chart extends D3Object {
         'y-axis';
     super.render(props);
     this.setXYValues();
-    this.renderAxis('xAxis', xAxisID);
-    this.renderAxis('yAxis', yAxisID);
+    // Only render the Axis, if defined
+    if (this.xAxis.axis) {
+      this.renderAxis('xAxis', xAxisID);
+    }
+    if (this.yAxis.axis) {
+      this.renderAxis('yAxis', yAxisID);
+    }
   }
 }
 
