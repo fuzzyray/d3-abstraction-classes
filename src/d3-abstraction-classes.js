@@ -202,6 +202,41 @@ class D3Object {
     this.appendSVGGroup('bottomRightGroup', this.bottomRightArea);
   }
 
+  addToolTips(data, displayFunc, props, tipDirection, element) {
+    const tipDisplay = (displayFunc !== undefined)
+        ? displayFunc
+        : d => d;
+    const tipProps = (props !== undefined)
+        ? props
+        : {};
+    const direction = (tipDirection !== undefined)
+        ? tipDirection
+        : 'n';
+    if (!this.tooltips) {
+      return;
+    }
+    this.svgGroups.plotGroup.selectAll(element)
+        .data(data)
+        .join(element)
+        .on('mouseover', (d, i, n) => {
+          Object.keys(tipProps).forEach(property => {
+            if (typeof tipProps[property] === 'function') {
+              this.tip.attr(property, tipProps[property](d));
+            } else {
+              this.tip.attr(property, tipProps[property]);
+            }
+          });
+          this.tip.direction(direction);
+          this.tip.html(tipDisplay(d));
+          this.tip.show(d, n[i]);
+          d3.select(n[i]).style('opacity', '0.5');
+        })
+        .on('mouseout', (d, i, n) => {
+          this.tip.hide(d, n[i]);
+          d3.select(n[i]).style('opacity', '1');
+        });
+  }
+
   renderLabel(group, placement, label, textRotation) {
     const {X, Y, fontSize} = placement;
     const {text, id} = label;
@@ -323,41 +358,6 @@ class D3Chart extends D3Object {
           .join(element)
           .attr(property, props[property]);
     });
-  }
-
-  addToolTips(data, displayFunc, props, tipDirection, element) {
-    const tipDisplay = (displayFunc !== undefined)
-        ? displayFunc
-        : d => d;
-    const tipProps = (props !== undefined)
-        ? props
-        : {};
-    const direction = (tipDirection !== undefined)
-        ? tipDirection
-        : 'n';
-    if (!this.tooltips) {
-      return;
-    }
-    this.svgGroups.plotGroup.selectAll(element)
-        .data(data)
-        .join(element)
-        .on('mouseover', (d, i, n) => {
-          Object.keys(tipProps).forEach(property => {
-            if (typeof tipProps[property] === 'function') {
-              this.tip.attr(property, tipProps[property](d));
-            } else {
-              this.tip.attr(property, tipProps[property]);
-            }
-          });
-          this.tip.direction(direction);
-          this.tip.html(tipDisplay(d));
-          this.tip.show(d, n[i]);
-          d3.select(n[i]).style('opacity', '0.5');
-        })
-        .on('mouseout', (d, i, n) => {
-          this.tip.hide(d, n[i]);
-          d3.select(n[i]).style('opacity', '1');
-        });
   }
 
   renderAxis(axis, id) {
