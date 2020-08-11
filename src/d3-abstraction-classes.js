@@ -137,7 +137,7 @@ class D3Object {
     // For margins, pass a percentage value or a margins object
     // default is 0% of the area for no margins
     const areaMargins = (margins === undefined)
-        ? D3Object.calculateMargins(5, height, width)
+        ? D3Object.calculateMargins(0, height, width)
         : (typeof margins === 'number')
             ? D3Object.calculateMargins(margins, height, width)
             : margins;
