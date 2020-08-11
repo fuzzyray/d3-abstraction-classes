@@ -106,15 +106,6 @@ class D3Object {
         this.height - this.margins.bottom);
   }
 
-  // DEPRECATED: Legacy getter functions
-  get displayWidth() {
-    return this.plotArea.width;
-  }
-
-  get displayHeight() {
-    return this.plotArea.height;
-  }
-
   static calculateMargins(percentage, height, width) {
     const percentValue = (percentage < 1)
         ? percentage
